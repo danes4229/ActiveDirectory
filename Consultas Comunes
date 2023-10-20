@@ -6,6 +6,33 @@ Get-ADUser -Filter * -Properties * | Select-Object -Property * -ExcludeProperty 
 
  La propiedad llamada "MemberOf" que muestra todos los grupos a los que pertenece cada usuario, utilizando el cmdlet Get-ADPrincipalGroupMembership.
 
+=================================================================================================================
+
+ todas las Service Account y las Managed Services Accounts
+
+# Importar el módulo de Active Directory
+Import-Module ActiveDirectory
+
+# Obtener una lista de todas las cuentas de usuario en Active Directory
+$TodasLasCuentas = Get-ADUser -Filter *
+
+# Filtrar las cuentas de servicio
+$CuentasDeServicio = $TodasLasCuentas | Where-Object {
+    $_.UserPrincipalName -like "*$"
+}
+
+# Filtrar las cuentas de servicio administradas
+$CuentasDeServicioAdministradas = $TodasLasCuentas | Where-Object {
+    $_.UserPrincipalName -like "*$"
+}
+
+# Mostrar la lista de cuentas de servicio
+Write-Host "Cuentas de Servicio:"
+$CuentasDeServicio | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+
+# Mostrar la lista de cuentas de servicio administradas
+Write-Host "Cuentas de Servicio Administradas:"
+$CuentasDeServicioAdministradas | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
 
 =================================================================================================================
 
@@ -96,7 +123,46 @@ Get-ADComputer -Filter * -Properties msDS-SupportedEncryptionTypes | Where-Objec
 Computers accounts that ar admin accounts
 Get-ADComputer -Filter {adminCount -eq 1} | Select-Object Name, DistinguishedName
 =================================================================================================================
+# Obtener una lista de todas las cuentas de usuario que tienen el atributo "adminCount" configurado
+$AdminAccounts = Get-ADUser -Filter {adminCount -eq 1}
 
+# Mostrar la lista de cuentas de administrador
+$AdminAccounts | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+
+=================================================================================================================
+
+Desglosar la propiedad MemberOf de cada cuenta del Active Directory y mostrar el resultado en un Select
+
+# Importar el módulo de Active Directory
+Import-Module ActiveDirectory
+
+# Obtener una lista de todas las cuentas de usuario
+$Usuarios = Get-ADUser -Filter *
+
+# Iterar a través de cada cuenta y desglosar la propiedad MemberOf
+$Resultado = $Usuarios | ForEach-Object {
+    $Cuenta = $_
+    $MemberOf = Get-ADPrincipalGroupMembership $Cuenta
+
+    # Crear un objeto personalizado para cada cuenta
+    [PSCustomObject]@{
+        Nombre = $Cuenta.Name
+        SamAccountName = $Cuenta.SamAccountName
+        DistinguishedName = $Cuenta.DistinguishedName
+        MemberOf = $MemberOf | Select-Object -ExpandProperty Name -join ', '
+    }
+}
+
+# Mostrar el resultado en un formato tabular
+$Resultado | Select-Object Nombre, SamAccountName, DistinguishedName, MemberOf | Format-Table -AutoSize
+
+
+=================================================================================================================
+# Obtener una lista de todas las cuentas de usuario que son miembros del grupo de administradores
+$Administradores = Get-ADGroupMember "Administradores" | Where-Object { $_.objectClass -eq "user" }
+
+$Administradores | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+=================================================================================================================
 Users that have MFA configured
 
 # Instalar el módulo de AzureAD si no está instalado
@@ -401,3 +467,7 @@ for row in dataframe_to_rows(df, index=False, header=False):
 # Guardar el archivo de Excel
 workbook.save("datos_usuarios_AD.xlsx")
 print("Datos de usuarios del Active Directory guardados en datos_usuarios_AD.xlsx")
+
+
+
+
