@@ -35,6 +35,29 @@ Write-Host "Cuentas de Servicio Administradas:"
 $CuentasDeServicioAdministradas | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
 
 =================================================================================================================
+todas las cuentas de servicio en Active Directory
+# Importar el módulo de Active Directory
+Import-Module ActiveDirectory
+
+# Obtener una lista de todas las cuentas de servicio
+$CuentasDeServicio = Get-ADUser -Filter {ServicePrincipalName -like '*'} -Properties ServicePrincipalName
+
+# Mostrar la lista de cuentas de servicio
+$CuentasDeServicio | Select-Object Name, SamAccountName, DistinguishedName, ServicePrincipalName | Format-Table -AutoSize
+
+=================================================================================================================
+Las cuentas de servicio administradas (Managed Service Accounts) 
+# Importar el módulo de Active Directory
+Import-Module ActiveDirectory
+
+# Obtener una lista de todas las cuentas de servicio administradas
+$CuentasDeServicioAdministradas = Get-ADServiceAccount -Filter *
+
+# Mostrar la lista de cuentas de servicio administradas
+$CuentasDeServicioAdministradas | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+
+
+=================================================================================================================
 
 un comando que te mostrará todas las propiedades de manera extendida para cada usuario en Active Directory:
 Get-ADUser -Filter * -Properties * | Select-Object *
