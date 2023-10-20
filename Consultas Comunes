@@ -296,3 +296,54 @@ for row in dataframe_to_rows(df, index=False, header=False):
 # Guardar el archivo de Excel
 workbook.save("datos_AD.xlsx")
 print("Datos del Active Directory guardados en datos_AD.xlsx")
+
+========================
+
+
+import pyad
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+import pandas as pd
+
+# Establece la ruta base para buscar todas las cuentas de usuario
+base_dn = "DC=<tudominio>,DC=com"
+
+# Busca todas las cuentas de usuario en el Active Directory
+user_objects = pyad.pyad_search(base_dn=base_dn, query="(objectClass=user)")
+
+# Crear un DataFrame de pandas para almacenar los datos
+df = pd.DataFrame()
+
+# Itera a través de las cuentas de usuario
+for user in user_objects:
+    user_dict = user.get_attributes()  # Obtiene todas las propiedades extendidas del usuario
+    # Convierte las fechas y objetos en texto
+    for key, value in user_dict.items():
+        if isinstance(value, pyad.adobjects.ADSysDateTime):
+            user_dict[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+        elif isinstance(value, pyad.adobjects.ADObject):
+            user_dict[key] = str(value)
+
+    # Obtiene los grupos a los que pertenece el usuario
+    groups = user.get_member_of()
+
+    # Agrega las propiedades de grupos a la entrada
+    user_dict['MemberOf'] = ', '.join([group.dn for group in groups])
+
+    df = df.append(user_dict, ignore_index=True)
+
+# Crear un archivo de Excel y guardar los datos
+workbook = Workbook()
+worksheet = workbook.active
+
+# Agregar encabezados
+headers = list(df.columns)
+worksheet.append(headers)
+
+# Agregar los datos del DataFrame al archivo de Excel
+for row in dataframe_to_rows(df, index=False, header=False):
+    worksheet.append(row)
+
+# Guardar el archivo de Excel
+workbook.save("datos_usuarios_AD.xlsx")
+print("Datos de usuarios del Active Directory guardados en datos_usuarios_AD.xlsx")
