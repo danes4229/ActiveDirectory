@@ -1,14 +1,298 @@
+Si deseas obtener todas las propiedades extendidas de cada usuario de Active Directory
 Get-ADUser -Filter * -Properties * | Select-Object -Property * -ExcludeProperty MemberOf | 
     Select-Object *,@{Name="MemberOf";Expression={(Get-ADPrincipalGroupMembership $_).Name -join ', '}} |
     Format-List
-Este comando realiza lo siguiente:
-
-Obtiene todas las propiedades extendidas de todos los usuarios en Active Directory, excluyendo la propiedad "MemberOf".
-Luego, agrega una nueva propiedad llamada "MemberOf" que muestra todos los grupos a los que pertenece cada usuario, utilizando el cmdlet Get-ADPrincipalGroupMembership.
-Finalmente, muestra la salida en formato de lista detallada.
-Este comando proporcionará una salida completa con todas las propiedades extendidas de cada usuario, incluyendo la lista de grupos a los que pertenecen. Ten en cuenta que la salida puede ser muy extensa y podría ser difícil de leer en la línea de comandos, por lo que es recomendable redirigirla a un archivo o utilizar herramientas de visualización de texto para un análisis más cómodo.
 
 
+ La propiedad llamada "MemberOf" que muestra todos los grupos a los que pertenece cada usuario, utilizando el cmdlet Get-ADPrincipalGroupMembership.
+
+
+=================================================================================================================
+
+un comando que te mostrará todas las propiedades de manera extendida para cada usuario en Active Directory:
+Get-ADUser -Filter * -Properties * | Select-Object *
+
+Get-ADUser -Filter * -Properties * | Select-Object -Property *,@{Name="MemberOf";Expression={(Get-ADPrincipalGroupMembership $_).Name -join ', '}}
+
+=================================================================================================================
+
+Para mostrar la fecha de la última modificación de la contraseña de krbtgt (que es crucial en la seguridad de Kerberos) por cada usuario en Active Directory, puedes usar el siguiente comando:
+Get-ADUser -Filter * -Properties msDS-LastSuccessfulInteractiveLogonTime | Select-Object Name, SamAccountName, DistinguishedName, @{Name='LastKrbtgtPwdChange';Expression={[DateTime]::FromFileTime($_.'msDS-LastSuccessfulInteractiveLogonTime')}} | Format-Table -AutoSize
+
+=================================================================================================================
+
+El siguiente comando para listar todas las cuentas de usuario en Active Directory que no tienen una política de contraseñas definida:
+Get-ADUser -Filter * | Where-Object { -not (Get-ADUserResultantPasswordPolicy $_) } | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+
+
+=================================================================================================================
+
+Este comando consulta todos los usuarios de Active Directory y selecciona propiedades específicas, como Nombre, Grupos, Fecha de Creación, Último Inicio de Sesión (convertido a formato de fecha), Control de Cuenta de Usuario, Compañía y Nombre Principal Kerberos (msDS-PrincipalName). 
+
+Get-ADUser -Filter * -Properties Name, MemberOf, whenCreated, lastLogonTimestamp, userAccountControl, company, msDS-PrincipalName | Select-Object Name, @{Name='Groups';Expression={$_.MemberOf -join ', '}}, whenCreated, @{Name='LastLogon';Expression={[DateTime]::FromFileTime($_.lastLogonTimestamp)}}, @{Name='UserType';Expression={
+    if ($_.userAccountControl -band 2) {'Normal User'} else {if ($_.userAccountControl -band 16) {'Machine Account'} else {'Unknown'}}
+}}, company, msDS-PrincipalName
+
+=================================================================================================================
+lista de cuentas de usuario en Active Directory que no tienen una política de contraseñas definida
+Get-ADUser -Filter * | Where-Object {-not (Get-ADFineGrainedPasswordPolicy -Filter {AppliesToAccount -like $_.DistinguishedName})} | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+
+=================================================================================================================
+
+Fecha de la última modificación del objeto KRBTGT
+Get-ADObject -Filter {Name -eq "krbtgt"} -Properties uSNChanged
+
+El valor de uSNChanged es un número que representa el momento en que se realizó la última modificación del objeto KRBTGT. Puedes convertir este valor a una fecha legible utilizando el siguiente comando:
+$krbtgt = Get-ADObject -Filter {Name -eq "krbtgt"} -Properties uSNChanged
+$lastPasswordChange = [datetime]::FromFileTime($krbtgt.uSNChanged)
+Write-Host "La última vez que se cambió la contraseña KRBTGT: $lastPasswordChange"
+
+=================================================================================================================
+Para obtener una lista de cuentas de administrador en Active Directory que no tengan la política de denegación de inicio de sesión configurada
+
+# Obtener una lista de todas las cuentas de administrador (aquellas con el atributo "adminCount" configurado)
+$CuentasAdmin = Get-ADUser -Filter {adminCount -eq 1}
+
+# Filtrar las cuentas de administrador que no tienen una política de denegación de inicio de sesión
+$CuentasSinDenegacion = $CuentasAdmin | Where-Object {
+    -not (Get-ADUserResultantEffectiveLogonDeny $($_.DistinguishedName))
+}
+
+# Mostrar la lista de cuentas de administrador sin política de denegación de inicio de sesión
+$CuentasSinDenegacion | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+
+
+=================================================================================================================
+Lista de cuentas de administrador en Active Directory que no tienen Service Principal Names (SPN) configurados
+Get-ADUser -Filter {adminCount -eq 1} -Properties servicePrincipalName | Where-Object { -not $_.servicePrincipalName } | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+
+=================================================================================================================
+
+ obtiene todas las cuentas de servicio y luego filtra las cuentas de servicio administradas (Managed Service Accounts) en base a si tienen la propiedad ManagedBy configurada.
+
+# Importar el módulo de Active Directory
+Import-Module ActiveDirectory
+
+# Obtener todas las cuentas de servicio (Service Accounts)
+$ServiceAccounts = Get-ADServiceAccount -Filter *
+
+# Obtener todas las cuentas de servicio administradas (Managed Service Accounts)
+$ManagedServiceAccounts = Get-ADServiceAccount -Filter {ManagedBy -like "*"}
+
+# Mostrar las cuentas de servicio
+Write-Host "Service Accounts:"
+$ServiceAccounts | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+
+# Mostrar las cuentas de servicio administradas
+Write-Host "Managed Service Accounts:"
+$ManagedServiceAccounts | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+
+=================================================================================================================
+
+Computers accounts with weak encryption type for kerberos
+Get-ADComputer -Filter * -Properties msDS-SupportedEncryptionTypes | Where-Object { ($_.msDS-SupportedEncryptionTypes -band 0x2) -eq 0x2 } | Select-Object Name, DistinguishedName
+
+=================================================================================================================
+Computers accounts that ar admin accounts
+Get-ADComputer -Filter {adminCount -eq 1} | Select-Object Name, DistinguishedName
+=================================================================================================================
+
+Users that have MFA configured
+
+# Instalar el módulo de AzureAD si no está instalado
+Install-Module -Name AzureAD -Force -AllowClobber
+
+# Importar el módulo de AzureAD
+Import-Module AzureAD
+
+# Conectar a tu cuenta de Azure AD (debes tener permisos para realizar esta operación)
+Connect-AzureAD
+
+# Obtener una lista de usuarios con MFA habilitada
+$usersWithMFA = Get-AzureADUser -Filter "StrongAuthenticationMethods/IsDefault -eq true"
+
+# Mostrar la lista de usuarios con MFA habilitada
+$usersWithMFA | Select-Object DisplayName, UserPrincipalName
+
+=================================================================================================================
+Todos los grupos huérfanos (orphan AD groups) en Active Directory, puedes usar PowerShell. Los grupos huérfanos son grupos que no tienen miembros ni pertenecen a ningún otro grupo. 
+
+Get-ADGroup -Filter {Members -notlike '*'} | Select-Object Name, DistinguishedName | Format-Table -AutoSize
+
+
+=================================================================================================================
+Para mostrar las cuentas de aplicaciones (Application Accounts) y las cuentas de usuario (User Accounts) en Active Directory
+# Importar el módulo de Active Directory
+Import-Module ActiveDirectory
+
+# Obtener todas las cuentas de aplicaciones (Application Accounts)
+$ApplicationAccounts = Get-ADUser -Filter {msDS-UserDnsDomain -ne $null}
+
+# Obtener todas las cuentas de usuario (User Accounts)
+$UserAccounts = Get-ADUser -Filter {msDS-UserDnsDomain -eq $null}
+
+# Mostrar las cuentas de aplicaciones
+Write-Host "Cuentas de aplicaciones (Application Accounts):"
+$ApplicationAccounts | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+
+# Mostrar las cuentas de usuario
+Write-Host "Cuentas de usuario (User Accounts):"
+$UserAccounts | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+
+=================================================================================================================
+Active Directory es un sistema complejo y extenso con una amplia variedad de propiedades y atributos que se pueden consultar para obtener información sobre usuarios, grupos y recursos. 
+A continuación se listan algunas de las propiedades comunes que se pueden obtener desde Active Directory:
+
+Para usuarios:
+
+Nombre de usuario (SamAccountName).
+Nombre completo (Name).
+Direccion de correo electrónico (EmailAddress).
+Número de teléfono (PhoneNumber).
+Direccion (StreetAddress).
+Ciudad (City).
+Estado o Provincia (State).
+Código Postal (PostalCode).
+País (Country).
+Departamento (Department).
+Puesto de trabajo (Title).
+Unidad Organizativa (OU).
+Grupos a los que pertenece (MemberOf).
+Última fecha de inicio de sesión (LastLogon).
+Fecha de creación (whenCreated).
+Fecha de última modificación (whenChanged).
+
+
+Para grupos:
+Nombre del grupo (Name).
+Descripción del grupo (Description).
+Miembros del grupo (Members).
+Miembros directos del grupo (Members).
+Propietario del grupo (ManagedBy).
+Tipo de grupo (GroupType).
+
+
+Para recursos compartidos (Shared Folders):
+Nombre del recurso compartido (Name).
+Ruta del recurso compartido (Path).
+Permiso de acceso al recurso compartido (SharePermissions).
+Propietario del recurso compartido (Owner).
+Tipo de recurso compartido (Type).
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+=================================================================================================================
+
+Para acceder a datos del Active Directory y guardarlos en una hoja de Excel con Python
+
+import pyad
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+import pandas as pd
+
+# Establece la ruta al servidor de Active Directory
+pyad.set_defaults(ldap_server="ldap://<tu_servidor_AD>")
+
+# Busca todas las cuentas de usuario
+user_objects = pyad.pyad_search()
+
+# Crear un DataFrame de pandas para almacenar los datos
+df = pd.DataFrame()
+
+# Itera a través de las cuentas de usuario
+for user in user_objects:
+    user_dict = user.get_attributes()  # Obtiene todas las propiedades extendidas del usuario
+    # Convierte las fechas y objetos en texto
+    for key, value in user_dict.items():
+        if isinstance(value, pyad.adobjects.ADSysDateTime):
+            user_dict[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+        elif isinstance(value, pyad.adobjects.ADObject):
+            user_dict[key] = str(value)
+    
+    df = df.append(user_dict, ignore_index=True)
+
+# Crear un archivo de Excel y guardar los datos
+workbook = Workbook()
+worksheet = workbook.active
+
+# Agregar encabezados
+headers = list(df.columns)
+worksheet.append(headers)
+
+# Agregar los datos del DataFrame al archivo de Excel
+for row in dataframe_to_rows(df, index=False, header=False):
+    worksheet.append(row)
+
+# Guardar el archivo de Excel
+workbook.save("datos_AD.xlsx")
+print("Datos del Active Directory guardados en datos_AD.xlsx")
+
+
+
+
+
+
+
+=================================================================================================================
+
+
+
+todas las computadoras en el Active Directory, recuperará sus propiedades extendidas, desglosará los grupos a los que pertenecen, formateará las fechas y objetos, y luego guardará todo en un archivo Excel llamado "datos_computadoras_AD.xlsx".
+
+
+
+
+
+
+import pyad
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+import pandas as pd
+
+# Establece la ruta al servidor de Active Directory
+pyad.set_defaults(ldap_server="ldap://<tu_servidor_AD>")
+
+# Busca todas las cuentas de usuario
+user_objects = pyad.pyad_search()
+
+# Crear un DataFrame de pandas para almacenar los datos
+df = pd.DataFrame()
+
+# Itera a través de las cuentas de usuario
+for user in user_objects:
+    user_dict = user.get_attributes()  # Obtiene todas las propiedades extendidas del usuario
+    # Convierte las fechas y objetos en texto
+    for key, value in user_dict.items():
+        if isinstance(value, pyad.adobjects.ADSysDateTime):
+            user_dict[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+        elif isinstance(value, pyad.adobjects.ADObject):
+            user_dict[key] = str(value)
+    
+    df = df.append(user_dict, ignore_index=True)
+
+# Crear un archivo de Excel y guardar los datos
+workbook = Workbook()
+worksheet = workbook.active
+
+# Agregar encabezados
+headers = list(df.columns)
+worksheet.append(headers)
+
+# Agregar los datos del DataFrame al archivo de Excel
+for row in dataframe_to_rows(df, index=False, header=False):
+    worksheet.append(row)
+
+# Guardar el archivo de Excel
+workbook.save("datos_AD.xlsx")
+print("Datos del Active Directory guardados en datos_AD.xlsx")
