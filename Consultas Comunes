@@ -494,3 +494,230 @@ print("Datos de usuarios del Active Directory guardados en datos_usuarios_AD.xls
 
 
 
+=======================================================================================================================
+
+ Listar todos los grupos en Active Directory y mostrar los usuarios que son miembros de cada grupo
+
+
+# Importar el módulo de Active Directory
+Import-Module ActiveDirectory
+
+# Obtener una lista de todos los grupos en Active Directory
+$Grupos = Get-ADGroup -Filter *
+
+# Iterar a través de cada grupo y obtener los miembros
+$Resultado = @()
+foreach ($Grupo in $Grupos) {
+    $Miembros = Get-ADGroupMember -Identity $Grupo
+
+    # Crear un objeto personalizado para el grupo y sus miembros
+    $ObjetoGrupo = [PSCustomObject]@{
+        NombreDelGrupo = $Grupo.Name
+        DistinguishedNameDelGrupo = $Grupo.DistinguishedName
+        Miembros = $Miembros | Where-Object { $_.objectClass -eq "user" } | Select-Object Name, SamAccountName
+    }
+
+    $Resultado += $ObjetoGrupo
+}
+
+# Mostrar el resultado en un formato tabular
+$Resultado | Format-Table -AutoSize
+
+
+
+
+
+===========================================================================================
+
+Para obtener todas las propiedades tanto de los miembros de grupos (ADGroupMember) como de los usuarios (ADUser) en Active Directory y establecer una relación entre ellos, puedes realizar un proceso de unión (join) entre las dos entidades. Esto se puede lograr utilizando el cmdlet Get-ADUser para obtener información de usuarios y el cmdlet Get-ADGroupMember para obtener información de los miembros de grupos.
+
+# Importar el módulo de Active Directory
+Import-Module ActiveDirectory
+
+# Obtener una lista de todos los grupos en Active Directory
+$Grupos = Get-ADGroup -Filter *
+
+# Crear una lista para almacenar el resultado final
+$Resultado = @()
+
+# Iterar a través de cada grupo
+foreach ($Grupo in $Grupos) {
+    $Miembros = Get-ADGroupMember -Identity $Grupo
+
+    # Iterar a través de cada miembro del grupo
+    foreach ($Miembro in $Miembros) {
+        if ($Miembro.objectClass -eq "user") {
+            # Obtener detalles del usuario
+            $Usuario = Get-ADUser -Identity $Miembro
+
+            # Crear un objeto personalizado que incluye información del grupo y del usuario
+            $ObjetoCombinado = [PSCustomObject]@{
+                Grupo = $Grupo.Name
+                DistinguishedNameDelGrupo = $Grupo.DistinguishedName
+                NombreDelUsuario = $Usuario.Name
+                SamAccountName = $Usuario.SamAccountName
+                DistinguishedNameDelUsuario = $Usuario.DistinguishedName
+                # Agregar más propiedades de usuario según sea necesario
+            }
+
+            # Agregar el objeto combinado al resultado
+            $Resultado += $ObjetoCombinado
+        }
+    }
+}
+
+# Mostrar el resultado en un formato tabular
+$Resultado | Format-Table -AutoSize
+
+
+
+
+
+=================================================================================================
+
+
+Para obtener todas las propiedades tanto de los miembros de grupos (ADGroupMember) como de las computadoras (ADComputer) en Active Directory y 
+establecer una relación entre ellos, puedes realizar un proceso de unión (join) entre las dos entidades. 
+Esto se puede lograr utilizando el cmdlet Get-ADComputer para obtener información de las computadoras y el cmdlet Get-ADGroupMember para obtener información de los miembros de grupos.
+
+
+# Importar el módulo de Active Directory
+Import-Module ActiveDirectory
+
+# Obtener una lista de todos los grupos en Active Directory
+$Grupos = Get-ADGroup -Filter *
+
+# Crear una lista para almacenar el resultado final
+$Resultado = @()
+
+# Iterar a través de cada grupo
+foreach ($Grupo in $Grupos) {
+    $Miembros = Get-ADGroupMember -Identity $Grupo
+
+    # Iterar a través de cada miembro del grupo
+    foreach ($Miembro in $Miembros) {
+        if ($Miembro.objectClass -eq "computer") {
+            # Obtener detalles de la computadora
+            $Computadora = Get-ADComputer -Identity $Miembro
+
+            # Crear un objeto personalizado que incluye información del grupo y de la computadora
+            $ObjetoCombinado = [PSCustomObject]@{
+                Grupo = $Grupo.Name
+                DistinguishedNameDelGrupo = $Grupo.DistinguishedName
+                NombreDeLaComputadora = $Computadora.Name
+                DNSHostName = $Computadora.DNSHostName
+                DistinguishedNameDeLaComputadora = $Computadora.DistinguishedName
+                # Agregar más propiedades de computadora según sea necesario
+            }
+
+            # Agregar el objeto combinado al resultado
+            $Resultado += $ObjetoCombinado
+        }
+    }
+}
+
+# Mostrar el resultado en un formato tabular
+$Resultado | Format-Table -AutoSize
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+===============================================================================================================
+
+
+
+
+Para listar todas las cuentas de servicio y mostrar todas sus propiedades en Active Directory.
+
+# Importar el módulo de Active Directory
+Import-Module ActiveDirectory
+
+# Obtener una lista de todas las cuentas de servicio
+$CuentasDeServicio = Get-ADServiceAccount -Filter *
+
+# Mostrar todas las propiedades de las cuentas de servicio
+$CuentasDeServicio | Format-Table -Property * -AutoSize
+
+
+
+
+
+
+
+
+===================================================================================================================
+
+
+
+Para listar todas las cuentas de aplicación en Active Directory que tengan configurada una política de contraseña (Password Policy)
+
+# Importar el módulo de Active Directory
+Import-Module ActiveDirectory
+
+# Obtener una lista de todas las cuentas de aplicación
+$CuentasDeAplicacion = Get-ADUser -Filter {ServicePrincipalName -like '*'} -Properties PasswordLastSet, PasswordNeverExpires, PasswordExpired, "msDS-UserPasswordExpiryTimeComputed"
+
+# Filtrar las cuentas de aplicación con configuración de contraseña
+$CuentasConPoliticaDePassword = $CuentasDeAplicacion | Where-Object {
+    $_.PasswordLastSet -ne $null -or $_.PasswordNeverExpires -eq $false -or $_.PasswordExpired -eq $true -or $_."msDS-UserPasswordExpiryTimeComputed" -ne $null
+}
+
+# Mostrar las cuentas de aplicación con configuración de contraseña
+$CuentasConPoliticaDePassword | Select-Object Name, SamAccountName, DistinguishedName | Format-Table -AutoSize
+
+
+
+
+===================================================================================================================
+Para identificar cuentas de usuario duplicadas o con múltiples IDs en Active Directory. 
+Por ejemplo, es común buscar duplicados basados en el campo SamAccountName, que es el nombre de cuenta de usuario único. 
+Aquí tienes un script que muestra las cuentas de usuario con el mismo SamAccountName:
+
+
+# Importar el módulo de Active Directory
+Import-Module ActiveDirectory
+
+# Obtener una lista de todas las cuentas de usuario
+$Usuarios = Get-ADUser -Filter *
+
+# Crear un diccionario para almacenar las cuentas duplicadas
+$Duplicados = @{}
+
+# Iterar a través de cada cuenta de usuario
+foreach ($Usuario in $Usuarios) {
+    $SamAccountName = $Usuario.SamAccountName
+
+    # Verificar si el nombre de cuenta ya existe en el diccionario
+    if ($Duplicados.ContainsKey($SamAccountName)) {
+        $Duplicados[$SamAccountName] += @($Usuario)
+    } else {
+        $Duplicados[$SamAccountName] = @($Usuario)
+    }
+}
+
+# Filtrar y mostrar las cuentas duplicadas
+$CuentasDuplicadas = $Duplicados.Values | Where-Object { $_.Count -gt 1 }
+
+# Mostrar la lista de cuentas de usuario duplicadas
+$CuentasDuplicadas | ForEach-Object { $_ | Select-Object SamAccountName, Name, DistinguishedName } | Format-Table -AutoSize
+===================================================================================================================
+
+===================================================================================================================
+
+===================================================================================================================
+
+===================================================================================================================
+
+===================================================================================================================
+
