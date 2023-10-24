@@ -711,7 +711,11 @@ $CuentasDuplicadas = $Duplicados.Values | Where-Object { $_.Count -gt 1 }
 
 # Mostrar la lista de cuentas de usuario duplicadas
 $CuentasDuplicadas | ForEach-Object { $_ | Select-Object SamAccountName, Name, DistinguishedName } | Format-Table -AutoSize
+
 ===================================================================================================================
+
+Usuarios con todos sus grupos
+Get-ADUser -Filter * | ForEach-Object { $Usuario = $_; Get-ADPrincipalGroupMembership $Usuario | ForEach-Object { $Grupo = $_; "$($Usuario.Name), $($Grupo.Name)" } }
 
 ===================================================================================================================
 
