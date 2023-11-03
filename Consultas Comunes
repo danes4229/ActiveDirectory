@@ -4,6 +4,45 @@
 $Result = @(); "administrators","server operators","account operators","domain admins" | ForEach-Object { $Result += [PSCustomObject]@{"Grupo"=$_;"Cantidad de usuarios"=(Get-ADGroupMember -Identity $_ | Where-Object {$_.objectClass -eq "user"}).Count} }; $Result | Export-Csv -Path "C:\Ruta\resultados.csv" -NoTypeInformation
 
 ========================================================================================
+ Computers accounts with weak encryption type for kerberos
+
+Import-Module ActiveDirectory; $ComputadorasDebiles = (Get-ADComputer -Filter {OperatingSystem -notlike "*Server*"} -Properties 'msDS-SupportedEncryptionTypes' | Where-Object { $_.'msDS-SupportedEncryptionTypes' -notcontains "AES256_CTS_HMAC_SHA1_96" -and $_.'msDS-SupportedEncryptionTypes' -notcontains "AES128_CTS_HMAC_SHA1_96" }).Count; $ComputadorasDebiles | Export-Csv -Path "C:\Ruta\computadoras_debiles.csv" -NoTypeInformation
+
+========================================================================================
+ list a Inventory of accounts on servers
+
+# Define the list of server names
+$serverNames = "Server1", "Server2"  # Add the names of your servers here
+
+# Create an array to store the results
+$results = @()
+
+# Iterate through each server
+foreach ($serverName in $serverNames) {
+    $serverInventory = [PSCustomObject]@{
+        "ServerName" = $serverName
+        "WindowsServers" = 0
+        "DomainAccounts" = 0
+        "LocalAccounts" = 0
+        "Groups" = 0
+    }
+
+    # Query local and domain accounts and groups on the server
+    $serverInventory."WindowsServers" = (Get-WmiObject -Class Win32_OperatingSystem -ComputerName $serverName).Name -match "Windows Server"
+    $serverInventory."DomainAccounts" = (Get-WmiObject -Class Win32_UserAccount -ComputerName $serverName | Where-Object { $_.LocalAccount -eq $false }).Count
+    $serverInventory."LocalAccounts" = (Get-WmiObject -Class Win32_UserAccount -ComputerName $serverName | Where-Object { $_.LocalAccount -eq $true }).Count
+    $serverInventory."Groups" = (Get-WmiObject -Class Win32_Group -ComputerName $serverName | Where-Object { $_.LocalAccount -eq $false }).Count
+
+    # Add the server's inventory to the results array
+    $results += $serverInventory
+}
+
+# Export the results to a CSV file
+$results | Export-Csv -Path "ServerInventory.csv" -NoTypeInformation
+
+
+========================================================================================
+========================================================================================
 Si deseas obtener todas las propiedades extendidas de cada usuario de Active Directory
 Get-ADUser -Filter * -Properties * | Select-Object -Property * -ExcludeProperty MemberOf | 
     Select-Object *,@{Name="MemberOf";Expression={(Get-ADPrincipalGroupMembership $_).Name -join ', '}} |
