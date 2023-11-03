@@ -1,5 +1,8 @@
 
  $Result = @(); $Result += [PSCustomObject]@{"Grupo"="administrators";"Cantidad de usuarios"=(Get-ADGroupMember -Identity "administrators" | Where-Object {$_.objectClass -eq "user"}).Count}; $Result += [PSCustomObject]@{"Grupo"="server operators";"Cantidad de usuarios"=(Get-ADGroupMember -Identity "server operators" | Where-Object {$_.objectClass -eq "user"}).Count}; $Result | Export-Csv -Path "C:\Ruta\resultados.csv" -NoTypeInformation
+
+$Result = @(); "administrators","server operators","account operators","domain admins" | ForEach-Object { $Result += [PSCustomObject]@{"Grupo"=$_;"Cantidad de usuarios"=(Get-ADGroupMember -Identity $_ | Where-Object {$_.objectClass -eq "user"}).Count} }; $Result | Export-Csv -Path "C:\Ruta\resultados.csv" -NoTypeInformation
+
 ========================================================================================
 Si deseas obtener todas las propiedades extendidas de cada usuario de Active Directory
 Get-ADUser -Filter * -Properties * | Select-Object -Property * -ExcludeProperty MemberOf | 
