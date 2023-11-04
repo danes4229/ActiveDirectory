@@ -68,7 +68,16 @@ $managedServiceAccountsCount = (Get-ADServiceAccount -Filter *).Count
 Write-Host "Número de Service Accounts: $serviceAccountsCount"
 Write-Host "Número de Managed Service Accounts: $managedServiceAccountsCount"
 ========================================================================================
+If you want to count the number of groups in your Active Directory environment but don't have specific server names, you can use PowerShell to query Active Directory for group objects.
 
+# Import the Active Directory module
+Import-Module ActiveDirectory
+
+# Query Active Directory for group objects
+$groupCount = (Get-ADGroup -Filter *).Count
+
+# Display the count of groups in Active Directory
+Write-Host "Number of groups in Active Directory: $groupCount"
 ========================================================================================
 Si deseas obtener todas las propiedades extendidas de cada usuario de Active Directory
 Get-ADUser -Filter * -Properties * | Select-Object -Property * -ExcludeProperty MemberOf | 
@@ -78,6 +87,44 @@ Get-ADUser -Filter * -Properties * | Select-Object -Property * -ExcludeProperty 
 
  La propiedad llamada "MemberOf" que muestra todos los grupos a los que pertenece cada usuario, utilizando el cmdlet Get-ADPrincipalGroupMembership.
 
+
+=================================================================================================================
+If you want to count the number of domain accounts in your Active Directory environment but don't have specific server names
+# Import the Active Directory module
+Import-Module ActiveDirectory
+
+# Query Active Directory for domain user accounts
+$domainAccountsCount = (Get-ADUser -Filter *).Count
+
+# Display the count of domain user accounts
+Write-Host "Number of domain user accounts in Active Directory: $domainAccountsCount"
+=================================================================================================================
+
+If you want to count the number of Windows Servers in your Active Directory environment but you don't have specific server names, you can use PowerShell to query the Active Directory for Windows Server computer objects.
+
+# Import the Active Directory module
+Import-Module ActiveDirectory
+
+# Query Active Directory for Windows Server computer objects
+$windowsServerCount = (Get-ADComputer -Filter {OperatingSystem -like "*Windows Server*"}).Count
+
+# Display the count of Windows Servers
+Write-Host "Number of Windows Servers in Active Directory: $windowsServerCount"
+
+=================================================================================================================
+To count the number of local accounts on a Windows server, you can use PowerShell to query the server's local user accounts.
+
+
+
+# Specify the name of the server
+$serverName = "ServerName"  # Replace with the name of your server
+
+# Query local user accounts on the server
+$localAccounts = (Get-WmiObject -Class Win32_UserAccount -ComputerName $serverName | Where-Object { $_.LocalAccount -eq $true }).Count
+
+# Display the count of local user accounts
+Write-Host "Number of local user accounts on $serverName: $localAccounts"
+=================================================================================================================
 =================================================================================================================
 
  todas las Service Account y las Managed Services Accounts
