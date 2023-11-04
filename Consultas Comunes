@@ -42,6 +42,33 @@ $results | Export-Csv -Path "ServerInventory.csv" -NoTypeInformation
 
 
 ========================================================================================
+
+listar de todas las cuentas de administrador que tienen un Service Principal Name (SPN) en Active Directory. 
+
+$spnFilter = "*/" 
+
+# Obtiene todas las cuentas de administrador
+$adminAccounts = Get-ADUser -Filter {Enabled -eq $true -and MemberOf -like "*Administrators*"} -Properties ServicePrincipalName
+
+# Filtra las cuentas de administrador que tienen SPN
+$adminAccountsWithSPN = $adminAccounts | Where-Object { $_.ServicePrincipalName -like $spnFilter }
+
+# Muestra la lista de cuentas de administrador con SPN
+$adminAccountsWithSPN | Select-Object Name, SamAccountName, ServicePrincipalName
+
+========================================================================================
+Número de "Service Accounts" y "Managed Service Accounts" en Active Directory
+
+
+# Contar el número de "Service Accounts" y "Managed Service Accounts"
+$serviceAccountsCount = (Get-ADUser -Filter {ServicePrincipalName -like '*' -and Enabled -eq $true}).Count
+$managedServiceAccountsCount = (Get-ADServiceAccount -Filter *).Count
+
+# Mostrar el resultado
+Write-Host "Número de Service Accounts: $serviceAccountsCount"
+Write-Host "Número de Managed Service Accounts: $managedServiceAccountsCount"
+========================================================================================
+
 ========================================================================================
 Si deseas obtener todas las propiedades extendidas de cada usuario de Active Directory
 Get-ADUser -Filter * -Properties * | Select-Object -Property * -ExcludeProperty MemberOf | 
