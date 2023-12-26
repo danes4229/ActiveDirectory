@@ -843,4 +843,187 @@ Get-ADUser -Filter * | ForEach-Object { $Usuario = $_; Get-ADPrincipalGroupMembe
 ===================================================================================================================
 
 ===================================================================================================================
+# Define las credenciales
+$clientId     = "TuClientID"       # Reemplaza con tu propio Client ID
+$clientSecret = "TuClientSecret"   # Reemplaza con tu propio Client Secret
+$tenantId     = "TuTenantID"       # Reemplaza con tu propio Tenant ID
+
+# Crear un objeto SecureString para el secreto del cliente
+$secureClientSecret = ConvertTo-SecureString -String $clientSecret -AsPlainText -Force
+
+# Crear un objeto de credenciales
+$credential = New-Object -TypeName PSCredential -ArgumentList $clientId, $secureClientSecret
+
+# Autenticarse en Azure
+Connect-AzAccount -ServicePrincipal -Credential $credential -TenantId $tenantId
+
+# Obtener todos los usuarios con MFA habilitada
+$usersWithMFA = Get-AzureADUser -All $true | Where-Object { $_.StrongAuthenticationMethods.Count -gt 0 }
+
+# Mostrar información sobre los usuarios con MFA (UserPrincipalName, DisplayName, ObjectId, CreatedDateTime)
+$usersWithMFA | Select-Object UserPrincipalName, DisplayName, ObjectId, CreatedDateTime
+
+# Puedes exportar la información a un archivo CSV si lo deseas
+$usersWithMFA | Select-Object UserPrincipalName, DisplayName, ObjectId, CreatedDateTime | Export-Csv -Path "C:\Ruta\Hacia\Tu\Archivo\UsuariosMFA.csv" -NoTypeInformation
+
+
+
+
+
+
+=========================================================================================================
+=========================================================================================================
+=========================================================================================================
+=========================================================================================================
+
+
+
+# Define las credenciales
+$clientId     = "TuClientID"       # Reemplaza con tu propio Client ID
+$clientSecret = "TuClientSecret"   # Reemplaza con tu propio Client Secret
+$tenantId     = "TuTenantID"       # Reemplaza con tu propio Tenant ID
+
+# Crear un objeto SecureString para el secreto del cliente
+$secureClientSecret = ConvertTo-SecureString -String $clientSecret -AsPlainText -Force
+
+# Crear un objeto de credenciales
+$credential = New-Object -TypeName PSCredential -ArgumentList $clientId, $secureClientSecret
+
+# Autenticarse en Azure
+Connect-AzAccount -ServicePrincipal -Credential $credential -TenantId $tenantId
+
+# Definir el rango de fechas para la búsqueda de eventos
+$startDate = (Get-Date).AddDays(-30)  # Fecha de inicio (30 días atrás)
+
+# Obtener eventos de "successful MFA challenge"
+$auditEvents = Get-AzureADAuditSignInLogs -Filter "ResultType eq 'Success' and ResourceDisplayName eq 'Authentication' and OperationType eq 'Interactive' and ClientAppUsed eq 'Other' and Status eq 'Success' and UserResult eq 'MFA challenge satisfied'" -StartDate $startDate
+
+# Mostrar información sobre los eventos (puedes personalizar según tus necesidades)
+$auditEvents | Select-Object UserPrincipalName, UserDisplayName, ClientAppUsed, ResourceDisplayName, OperationType, ResultType, EventDateTime
+
+# Puedes exportar la información a un archivo CSV si lo deseas
+$auditEvents | Select-Object UserPrincipalName, UserDisplayName, ClientAppUsed, ResourceDisplayName, OperationType, ResultType, EventDateTime | Export-Csv -Path "C:\Ruta\Hacia\Tu\Archivo\SuccessfulMFAEvents.csv" -NoTypeInformation
+
+
+
+
+
+=========================================================================================================
+=========================================================================================================
+=========================================================================================================
+=========================================================================================================
+# Define las credenciales
+$clientId     = "TuClientID"       # Reemplaza con tu propio Client ID
+$clientSecret = "TuClientSecret"   # Reemplaza con tu propio Client Secret
+$tenantId     = "TuTenantID"       # Reemplaza con tu propio Tenant ID
+
+# Crear un objeto SecureString para el secreto del cliente
+$secureClientSecret = ConvertTo-SecureString -String $clientSecret -AsPlainText -Force
+
+# Crear un objeto de credenciales
+$credential = New-Object -TypeName PSCredential -ArgumentList $clientId, $secureClientSecret
+
+# Autenticarse en Azure
+Connect-AzAccount -ServicePrincipal -Credential $credential -TenantId $tenantId
+
+# Obtener la lista de aplicaciones integradas con SSO
+$integratedApps = Get-AzADServicePrincipal -Filter "AppRolesAssigned/any()" | Select-Object DisplayName, AppRolesAssigned
+
+# Mostrar información sobre las aplicaciones (puedes personalizar según tus necesidades)
+$integratedApps | Format-Table -AutoSize
+
+# Puedes exportar la información a un archivo CSV si lo deseas
+$integratedApps | Export-Csv -Path "C:\Ruta\Hacia\Tu\Archivo\AplicacionesIntegradasSSO.csv" -NoTypeInformation
+
+
+
+
+
+
+=========================================================================================================
+=========================================================================================================
+=========================================================================================================
+=========================================================================================================
+
+# Instalar el módulo Microsoft.Graph si no lo has hecho
+Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope CurrentUser
+
+# Importar el módulo
+Import-Module Microsoft.Graph
+
+# Definir credenciales y conectarse a Azure AD
+$clientId       = "TuClientID"
+$clientSecret   = "TuClientSecret"
+$tenantId       = "TuTenantID"
+$securePassword = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+$credential     = New-Object PSCredential -ArgumentList $clientId, $securePassword
+
+Connect-MgGraph -ClientID $clientId -ClientSecret $credential.Password -TenantId $tenantId
+
+# Obtener eventos de riesgo (puede incluir eventos de autenticación basados en riesgos)
+$riskEvents = Get-MgRiskDetection -Filter "state eq 'active'"
+
+# Mostrar información sobre los eventos de riesgo
+$riskEvents | Format-Table -AutoSize
+
+
+
+
+
+
+=========================================================================================================
+=========================================================================================================
+=========================================================================================================
+=========================================================================================================
+
+# Instalar el módulo Microsoft.Graph si no lo has hecho
+Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope CurrentUser
+
+# Importar el módulo
+Import-Module Microsoft.Graph
+
+# Definir credenciales y conectarse a Azure AD
+$clientId       = "TuClientID"
+$clientSecret   = "TuClientSecret"
+$tenantId       = "TuTenantID"
+$securePassword = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+$credential     = New-Object PSCredential -ArgumentList $clientId, $securePassword
+
+Connect-MgGraph -ClientID $clientId -ClientSecret $credential.Password -TenantId $tenantId
+
+# Obtener eventos de intentos de autenticación fallidos
+$failedAuthEvents = Get-MgSignIn -Filter "status eq 'failure'"
+
+# Mostrar información sobre los eventos de autenticación fallidos
+$failedAuthEvents | Format-Table -AutoSize
+
+
+
+
+
+=========================================================================================================
+=========================================================================================================
+=========================================================================================================
+=========================================================================================================
+
+
+
+
+
+
+
+=========================================================================================================
+=========================================================================================================
+=========================================================================================================
+=========================================================================================================
+
+
+
+
+
+
+
+
+
+
 
