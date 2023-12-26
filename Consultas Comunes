@@ -1006,6 +1006,29 @@ $failedAuthEvents | Format-Table -AutoSize
 =========================================================================================================
 =========================================================================================================
 
+# Instalar el módulo Microsoft.Graph si no lo has hecho
+Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope CurrentUser
+
+# Importar el módulo
+Import-Module Microsoft.Graph
+
+# Definir credenciales y conectarse a Azure AD
+$clientId       = "TuClientID"
+$clientSecret   = "TuClientSecret"
+$tenantId       = "TuTenantID"
+$securePassword = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+$credential     = New-Object PSCredential -ArgumentList $clientId, $securePassword
+
+Connect-MgGraph -ClientID $clientId -ClientSecret $credential.Password -TenantId $tenantId
+
+# Obtener la lista de aplicaciones en Azure AD
+$applications = Get-MgServicePrincipal
+
+# Filtrar aplicaciones que no tienen MFA configurada
+$appsWithoutMFA = $applications | Where-Object { $_.StrongAuthenticationMethods.Count -eq 0 }
+
+# Mostrar información sobre las aplicaciones sin MFA
+$appsWithoutMFA | Format-Table -AutoSize
 
 
 
