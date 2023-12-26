@@ -898,10 +898,9 @@ $startDate = (Get-Date).AddDays(-30)  # Fecha de inicio (30 días atrás)
 # Obtener eventos de "successful MFA challenge"
 $auditEvents = Get-AzureADAuditSignInLogs -Filter "ResultType eq 'Success' and ResourceDisplayName eq 'Authentication' and OperationType eq 'Interactive' and ClientAppUsed eq 'Other' and Status eq 'Success' and UserResult eq 'MFA challenge satisfied'" -StartDate $startDate
 
-# Mostrar información sobre los eventos (puedes personalizar según tus necesidades)
+# Mostrar información sobre los eventos 
 $auditEvents | Select-Object UserPrincipalName, UserDisplayName, ClientAppUsed, ResourceDisplayName, OperationType, ResultType, EventDateTime
 
-# Puedes exportar la información a un archivo CSV si lo deseas
 $auditEvents | Select-Object UserPrincipalName, UserDisplayName, ClientAppUsed, ResourceDisplayName, OperationType, ResultType, EventDateTime | Export-Csv -Path "C:\Ruta\Hacia\Tu\Archivo\SuccessfulMFAEvents.csv" -NoTypeInformation
 
 
